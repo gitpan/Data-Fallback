@@ -22,7 +22,7 @@ use Carp qw(confess);
 # I use dumper just to show some complex structures
 use Data::Dumper;
 
-# here I write out a couple files which I late clean up
+# here I write out a couple files which I later clean up
 # the idea is that the over file, overrides the default file
 
 my $over_file    = "/tmp/data_fallback_over";

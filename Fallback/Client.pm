@@ -16,9 +16,9 @@ sub new {
   my $class = ref($type) || $type || __PACKAGE__;
   my @PASSED_ARGS = (ref $_[0] eq 'HASH') ? %{$_[0]} : @_;
   my @DEFAULT_ARGS = (
-    reverse_lookup => 0,
-    host => 'localhost',
-    port => '20203',
+    reverse_lookup => '',
+    host           => 'localhost',
+    port           => '20203',
   );
   my %ARGS = (@DEFAULT_ARGS, @PASSED_ARGS);
   return $class->SUPER::new(\%ARGS);
@@ -34,7 +34,6 @@ sub get {
   $self->make_block;
   $self->post_block;
   $self->get_response;
-  print "repsonse\n$self->{response}{body}\n";
   return $self->parse_response;
 }
 
@@ -102,5 +101,52 @@ sub parse_response {
   }
   return $return;
 }
+
+=head1 NAME
+
+Data::Fallback::Client - a client for Data::Fallback
+
+=head1 DESCRIPTION
+
+Data::Fallback::Client is a simple client to interact with an active Data::Fallback::Daemon.
+
+=head1 EXAMPLE
+
+#!/usr/bin/perl -w
+
+use strict;
+use Data::Fallback::Client;
+
+my $self = Data::Fallback::Client->new({
+
+  # point to the Data::Fallback::Daemon that is running
+  host           => 'localhost',
+  port           => '20203',
+
+});
+
+my $value = $self->get("/list_name/primary_key/column");
+
+=head1 A SIMPLE WARNING
+
+I plan on eventually supporting XML, but I am not sure when.  My protocol is not written in stone, so please be agile when updating
+to new versions.
+
+=head1 THANKS
+
+Thanks to Paul Seamons for Net::Server and for helping me set up this simple client.
+
+=head1 AUTHOR
+
+Copyright 2001-2002, Earl J. Cahill.  All rights reserved.
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+Address bug reports and comments to: cpan@spack.net.
+
+When sending bug reports, please provide the version of Data::Fallback, the version of Perl, and the name and version of the operating
+system you are using.
+
+=cut
 
 1;

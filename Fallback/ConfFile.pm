@@ -118,4 +118,98 @@ sub write_conf_file {
   close(FILE);
 }
 
+=head1 NAME
+
+Data::Fallback::ConfFile - conf file package for Data::Fallback 
+
+=head1 DESCRIPTION
+
+Data::Fallback looks through an array ref of hash refs, where each hash ref (a level) describes how to get data
+from  that level.  Here's a typical level
+
+{
+  # refers to Data::Fallback::ConfFile
+  package => 'ConfFile',
+
+  # content is a filename, $primary_key gets parsed in with the primary key for a given request
+  content => '/tmp/fallback/state_$primary_key',
+
+  # this says the conf file will be updated with information from subsequent levels
+  accept_update => 'group',
+
+  # this would say to only allow updates of individual items
+  #accept_update => 'item',
+},
+
+
+Please refer to the Data::Fallback perldoc for more information about lists and levels.
+
+=head1 EXAMPLE
+
+Let's say you have a list of directories that contain parallel conf files, like so
+
+  # the 12 is some arbitrary primary key
+  /tmp/dir1/file_12
+  key1 key1 from dir1
+  key2 key2 from dir1
+
+  /tmp/dir2/file_12
+  key2 key2 from dir2
+  key3 key3 from dir2
+
+
+The code below could be used to fallback through them.
+
+#!/usr/bin/perl -w
+
+use strict;
+use Data::Fallback;
+
+my $self = Data::Fallback->new({
+
+list => [
+    {
+      # filename
+      content => '/tmp/dir1/file_$primary_key',
+    },
+    {
+      content => '/tmp/dir2/file_$primary_key',
+    },
+  ],
+
+  # the package looks first to the level, then to the object
+  # so if each level has the same package, you can just specify it in the object
+  package => 'ConfFile',
+
+  # lists must be names
+  list_name => 'test_list',
+});
+
+# 12 is the primary key (use // if no primary key), and key3 is the name of the key to retrieve
+my $got = $self->get("/12/key3");
+
+=head1 FILE PARSING
+
+Right now, I just do something like
+
+split /\s+/, $line, 2
+
+to get a key/value pair for each line in the conf file.  This is done through the method contentToHash, which you can
+easily override for more complicated parsing.  The actual line looks like something like this
+
+my %hash = $line =~ /(.+?)\s+(.+)/g;
+
+=head1 AUTHOR
+
+Copyright 2001-2002, Earl J. Cahill.  All rights reserved.
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+Address bug reports and comments to: cpan@spack.net.
+
+When sending bug reports, please provide the version of Data::Fallback, the version of Perl, and the name and version of the operating
+system you are using.
+
+=cut
+
 1;

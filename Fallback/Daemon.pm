@@ -182,7 +182,9 @@ Having one database box and n client boxes doesn't scale too hot for n very larg
 client boxes each running their own Data::Fallback::Daemon scales well for large n.  So, typical usage in my view is
 to have local daemons running on each client box.
 
-=head1 EXAMPLE
+=head1 DBI EXAMPLE
+
+  This example requires DBI and DBD::mysql to be installed on the box.
 
   #!/usr/bin/perl -w
 
@@ -192,6 +194,10 @@ to have local daemons running on each client box.
 
   # first we set up a simple Data::Fallback::Daemon object
   my $self = Data::Fallback::Daemon->new({
+
+    # you can change the port if you like
+    port            => '20203',
+
     # reverse_lookups can take awhile when you aren't connected to the web,
     # so I just turn them off for testing purposees
     reverse_lookups => '',
@@ -200,33 +206,22 @@ to have local daemons running on each client box.
     fallback => Data::Fallback->new(),
   });
 
-  my $db1_dsn = ['dbi:mysql:CHANGE TO YOUR DATABASE', 'CHANGE TO YOUR USER', 'CHANGE TO YOUR PASSWORD'];
-  my $db2_dsn = ['dbi:Pg:dbname=CHANGE TO YOUR DATABASE', 'CHANGE TO YOUR USER', 'CHANGE TO YOUR PASSWORD'];
+  # this is just a dumb test server that I can't guarantee will be up
+  # generally, db is an array ref of your connection info
+  my $db = ["DBI:mysql:database=fallback;host=spack.net;port=7777", "fallback", ""];
 
   # loaded_list is a hash ref of all the lists you want to have the daemon maintain
-  # the hash keys two_dbs, second_test are how the lists are referenced
+  # the hash key state is how the list is referenced
   $self->{fallback}{loaded_list} = {
-    db_to_conf => [
+    state => [
       {
-        content       => '/tmp/fallback/$primary_key',
+        content       => '/tmp/fallback/state_$primary_key',
         package       => 'ConfFile',
         accept_update => 'group',
       },
       {
-        db      => $db1_dsn,
-        content => 'SELECT foo FROM foo WHERE id = ?',
-        package => 'DBI',
-      },
-    ],
-    two_dbs => [
-      {
-        db      => $db1_dsn,
-        content => 'SELECT foo FROM foo WHERE id = ?',
-        package => 'DBI',
-      },
-      {
-        db      => $db2_dsn,
-        content => 'SELECT foo FROM foo WHERE id = ?',
+        db      => $db,
+        content => 'SELECT * FROM state WHERE id = ?',
         package => 'DBI',
       },
     ],
@@ -235,4 +230,20 @@ to have local daemons running on each client box.
   # all set up, just need to run
   $self->run();
 
+=head1 THANKS
+
+Thanks to Paul Seamons for Net::Server and for helping me set up this simple daemon.
+
+=head1 AUTHOR
+
+Copyright 2001-2002, Earl J. Cahill.  All rights reserved.
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+Address bug reports and comments to: cpan@spack.net.
+
+When sending bug reports, please provide the version of Data::Fallback, the version of Perl, and the name and version of the operating
+system you are using.
+
+=cut
 1;

@@ -11,7 +11,7 @@ use Carp qw(confess);
 
 @ISA = ('Exporter');
 @EXPORT_OK  = qw( cache_hash );
-$VERSION = "0.10";
+$VERSION = "0.15";
 
 sub new {
   my $type = shift;
@@ -195,19 +195,15 @@ sub get {
       $self->{hash} = $self->{list}[$self->{i}];
       $self->{hash}{item} = $item;
 
-      my $clean_hash_primary_key = 0;
-      if(defined $primary_key) {
-        $self->{hash}{primary_key} = $primary_key;
-        $self->{set_primary_key} = $primary_key;
-        $clean_hash_primary_key = 1;
-      }
+      $self->{this_primary_key} = $primary_key || $self->{hash}{primary_key} || $self->{primary_key} || '';
+
 
       my $clean_hash_content = 0;
       my $orig_hash_content = '';
       if($self->{hash}{content} && $self->{hash}{content} =~ /\$primary_key\b/) {
         
         $orig_hash_content = $self->{hash}{content};
-        $self->{hash}{content} =~ s/\$primary_key\b/$self->get_cache_key('primary_key')/ge;
+        $self->{hash}{content} =~ s/\$primary_key\b/$self->{this_primary_key}/;
 
         $clean_hash_content = 1;
 
@@ -230,10 +226,6 @@ sub get {
           item          => $self->{item},
           value         => $self->{update}{item},
         };
-        if($clean_hash_primary_key) {
-          delete $self->{hash}{primary_key};
-          delete $self->{set_primary_key};
-        }
         if($clean_hash_content) {
           $self->{hash}{content} = $orig_hash_content;
           $self->{true_content} = $orig_hash_content;
@@ -241,10 +233,6 @@ sub get {
         $self->list_update($self->{i});
         last;
       } else {
-        if($clean_hash_primary_key) {
-          delete $self->{hash}{primary_key};
-          delete $self->{set_primary_key};
-        }
         if($clean_hash_content) {
           $self->{hash}{content} = $orig_hash_content;
           $self->{true_content} = $orig_hash_content;
@@ -492,7 +480,7 @@ sub cache_hashed {
 sub get_cache_key {
   my $self = shift;
   my $key = shift;
-  return $self->{hash}{$key} || $self->{$key} || '';
+  return $self->{"this_$key"} || $self->{hash}{$key} || $self->{$key} || '';
 }
 
 
@@ -626,7 +614,19 @@ The TO_DO shows where the poject is headed.
 =head1 THANKS
 
 Thanks to Rob Brown, Paul Seamons, Allen Bettilyon and Dan Hanks for listening to my babblings and offering feedback.  Thanks to Rob
-Brown for testing my first version.  Also, thanks to Paul for Net::Server and helping me set up Data::Fallback::Daemon.
+Brown for testing my first version.  Also, thanks to Paul for Net::Server and helping me set up Data::Fallback::Daemon.  Lincoln Stein's
+AUTHOR INFORMATION was borrowed from heavily.
+
+=head1 AUTHOR
+
+Copyright 2001-2002, Earl J. Cahill.  All rights reserved.
+
+This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+
+Address bug reports and comments to: cpan@spack.net.
+
+When sending bug reports, please provide the version of Data::Fallback, the version of Perl, and the name and version of the operating
+system you are using.
 
 =cut
 
