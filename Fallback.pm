@@ -11,7 +11,7 @@ use Carp qw(confess);
 
 @ISA = ('Exporter');
 @EXPORT_OK  = qw( cache_hash );
-$VERSION = "0.01";
+$VERSION = "0.02";
 
 sub new {
   my $type = shift;
