@@ -11,7 +11,7 @@ use Carp qw(confess);
 
 @ISA = ('Exporter');
 @EXPORT_OK  = qw( cache_hash );
-$VERSION = "0.15";
+$VERSION = "0.16";
 
 sub new {
   my $type = shift;
@@ -362,7 +362,7 @@ sub INITIALIZE_PACKAGE {
 }
 
 ### this turns the object into the correct type
-### thanks to Paul Seamons for this code
+### thanks to Paul Seamons for the start of this code
 sub morph {
   my $self = shift;
   my $package = shift;
@@ -370,13 +370,44 @@ sub morph {
   my $tmp_package = $package;
   $tmp_package =~ s@::@/@g;
   ### polymorph
-  eval {
-    require "Data/Fallback/$tmp_package.pm";
-  };
-  if( $@ ){
-    die "bad stuff on require of Data/Fallback/$tmp_package.pm: $@";
+
+  my $at = '';
+  # this little trick should allow users to write their own overriding
+  # fallback methods, thanks to Rob Brown for the idea
+  if($tmp_package =~ m@/@) {
+    eval {
+      require "$tmp_package.pm";
+    };
+    if($@) {
+      $at .= $@;
+    } else {
+      bless $self, $package;
+    }
+  } else {
+
+    # likely a Data::Fallback package
+    eval {
+      require "Data/Fallback/$tmp_package.pm";
+    };
+    if( $@ ){
+      $at .= $@;
+      # this is just for sort of top level stuff like CGI
+      eval {
+        require "$tmp_package.pm";
+      };
+
+      if($@) {
+        $at .= $@;
+      } else {
+        $at = '';
+        bless $self, $package;
+      }
+
+    } else {
+      bless $self, "Data::Fallback::$package";
+    }
   }
-  bless $self, "Data::Fallback::$package";
+  die "bad stuff on require of $tmp_package: $at" if($at);
   $self->INITIALIZE_PACKAGE($package);
   return $self;
 }
@@ -604,6 +635,29 @@ So, even after the restart, the database only gets hit once.
   print $self->get('key1') . "\n";
   print Dumper $self->{history};
   unlink $over_file, $default_file;
+
+=head1 PACKAGES
+
+You are able to write your own packages that aren't a part of Data::Fallback.  Such packages would look something like this
+
+#!/usr/bin/perl -w
+
+package Mine;
+
+use strict;
+use Data::Fallback;
+use vars qw(@ISA);
+
+@ISA = qw(Data::Fallback);
+
+1;
+
+and methods for at least each of the following _GET, SET_ITEM, SET_GROUP, SET_SESSION_ITEM, SET_SESSION_CONTENT.  This
+functionality allows you to build your content however you like, from wherever you like.  For example, let's supposing you have
+your own objects that build entire pages.  You could simply wrap around said objects with the above methods.  Put a nice
+WholeFile cache that accepts updates in front of your personal object.  On the first hit, your content gets generated, in some
+potentially very expensive way.  On the second hit you cache from either the Memory package, or the WholeFile level you inserted.
+Currently, there are cacheing issues, but I hope yo clear them up in time.
 
 =head1 APOLOGIES
 

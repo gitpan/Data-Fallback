@@ -1,5 +1,8 @@
 Revision history for Perl extension Data::Fallback.
 
+0.16  Fri Oct 25 00:05:00 2002
+  - allowing for users to include their own packages in their lists
+
 0.15  Thu Oct 24 23:06:00 2002
   - getting fallback schemes working a little better
   - adding perldocs for ConfFile and other packages
