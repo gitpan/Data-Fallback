@@ -1,7 +1,10 @@
 Revision history for Perl extension Data::Fallback.
 
+0.10  Tue Oct 16 00:52:52 2002
+  - getting Client and Daemon stuff to work
+  - redefining how primary_key stuff works
+0.02  Mon Oct  7 19:00:00 2002
+  - getting rid of Client and Daemon stuff till it is more stable
 0.01  Wed Oct  2 21:19:58 2002
 	- original version; created by h2xs 1.21 with options
 		-X Data::Fallback
-0.02  Mon Oct  7 19:00:00 2002
-  - getting rid of Client and Daemon stuff till it is more stable

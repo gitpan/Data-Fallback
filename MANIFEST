@@ -4,11 +4,10 @@ Makefile.PL
 MANIFEST
 README
 TO_DO
-test.pl
+t/01_simple.t
 Fallback/ConfFile.pm
 Fallback/DBI.pm
 Fallback/Memory.pm
 Fallback/WholeFile.pm
-
-#Fallback/Client.pm
-#Fallback/Daemon.pm
+Fallback/Client.pm
+Fallback/Daemon.pm

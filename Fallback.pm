@@ -11,7 +11,7 @@ use Carp qw(confess);
 
 @ISA = ('Exporter');
 @EXPORT_OK  = qw( cache_hash );
-$VERSION = "0.02";
+$VERSION = "0.10";
 
 sub new {
   my $type = shift;
@@ -27,12 +27,6 @@ sub new {
 
   return $cache_object;
 }
-
-use subs qw(isun);
-sub isun {
-  return;
-}
-
 
 sub expired_check {
   my $self = shift;
@@ -94,14 +88,11 @@ sub cache_hash {
   $self->{int_time} = (int(time/$self->{ttl}));
 
   if(exists $self->{base_hash}{$self->{ttl}}{$self->{int_time}}) {
-    isun "exists";
 
   } else {
-    isun "else exists";
     foreach my $key (keys %{$self->{base_hash}{$self->{ttl}}}) {
 
       if($self->expired_check($key)) {
-        isun "EXPIRED: $self->{int_time} & $key";
         $self->cleanup($self->{base_hash}{$self->{ttl}}, $key);
       }
     }
@@ -151,11 +142,6 @@ sub new {
   return $self;
 }
 
-use subs qw(isun);
-sub isun {
-  return;
-}
-
 sub set_zeroth_hash {
   my $self = shift;
   my $passed_zeroth_hash = shift;
@@ -177,12 +163,19 @@ sub set_zeroth_hash {
 
 sub get {
   my $self = shift;
-  my $items = shift;
+  my $chunk = shift;
+
+  my ($primary_key, $items);
+  if($chunk =~ m@^/(.+?)/(.+)$@) {
+    ($primary_key, $items) = ($1, $2);
+  } else {
+    $items = $chunk;
+  }
   die "need a \$self->{list_name}" unless( (defined $self->{list_name}) && length $self->{list_name});
   die "\$self->{list} is required" unless $self->{list};
   die "\$self->{list} needs to be an array ref" unless(ref $self->{list} && ref $self->{list} eq 'ARRAY');
   die "\$self->{list} needs to be an array ref of hash refs" unless(ref $self->{list}[0] && ref $self->{list}[0] eq 'HASH');
-  die "usage: \$self->get('item1,item2')" unless( (defined $items) && length $items);
+  die "usage: \$self->get('item1,item2') ($chunk)" unless( (defined $items) && length $items);
 
   if($self->{use_zeroth_hash} && !$self->{list}[0]{zeroth_hash}) {
     unshift @{$self->{list}}, $self->{zeroth_hash};
@@ -192,6 +185,7 @@ sub get {
   my $return = [];
   $self->{history} = [];
   foreach my $item (split /\s*,\s*/, $items) {
+
     $self->{item} = $item;
 
     $self->{got_item_from} = "";
@@ -201,6 +195,24 @@ sub get {
       $self->{hash} = $self->{list}[$self->{i}];
       $self->{hash}{item} = $item;
 
+      my $clean_hash_primary_key = 0;
+      if(defined $primary_key) {
+        $self->{hash}{primary_key} = $primary_key;
+        $self->{set_primary_key} = $primary_key;
+        $clean_hash_primary_key = 1;
+      }
+
+      my $clean_hash_content = 0;
+      my $orig_hash_content = '';
+      if($self->{hash}{content} && $self->{hash}{content} =~ /\$primary_key\b/) {
+        
+        $orig_hash_content = $self->{hash}{content};
+        $self->{hash}{content} =~ s/\$primary_key\b/$self->get_cache_key('primary_key')/ge;
+
+        $clean_hash_content = 1;
+
+      }
+
       die "need a content" if(!$self->{hash}{content} && !$self->{hash}{zeroth_hash});
 
       $self->{hash}{package} ||= $self->{package};
@@ -208,29 +220,42 @@ sub get {
 
       $self->morph($self->{hash}{package});
       $self->{hash}{content} ||= '';
-      isun "trying to _GET $item from $self->{hash}{package} ($self->{hash}{content})";
       if($self->_GET) {
-        isun "did _GET $item from $self->{hash}{package} ($self->{hash}{content})";
         $self->{got_item_from} = $self->{hash}{package};
         $self->{got_item_from} .= " ($self->{from_cache})" if($self->{from_cache});
         push @{$return}, $self->{update}{item};
         push @{$self->{history}}, {
           content       => $self->{hash}{content},
           got_item_from => $self->{got_item_from},
-          item => $self->{item},
+          item          => $self->{item},
           value         => $self->{update}{item},
         };
+        if($clean_hash_primary_key) {
+          delete $self->{hash}{primary_key};
+          delete $self->{set_primary_key};
+        }
+        if($clean_hash_content) {
+          $self->{hash}{content} = $orig_hash_content;
+          $self->{true_content} = $orig_hash_content;
+        }
         $self->list_update($self->{i});
         last;
       } else {
-        isun "didn't _GET $item from $self->{hash}{package} ($self->{hash}{content})";
+        if($clean_hash_primary_key) {
+          delete $self->{hash}{primary_key};
+          delete $self->{set_primary_key};
+        }
+        if($clean_hash_content) {
+          $self->{hash}{content} = $orig_hash_content;
+          $self->{true_content} = $orig_hash_content;
+        }
       }
     }
     unless($self->{got_item_from}) {
       # I didn't find a value, so add on undef
       push @{$return}, '';
       push @{$self->{history}}, {
-        content       => $self->{hash}{content},
+        content       => $self->{true_content},
         got_item_from => 'nowhere',
         item => $self->{item},
         value         => 'NULL',
@@ -269,6 +294,11 @@ sub list_update {
     my $accept_update = $self->get_accept_update;
     next unless($accept_update);
 
+    my $delete_hash_primary_key;
+    if(!exists $self->{hash}{primary_key} && exists $self->{set_primary_key}) {
+      $self->{hash}{primary_key} = $self->{set_primary_key};
+    }
+
     if(!ref $accept_update) {
       $self->_list_update_helper($accept_update);
     } else {
@@ -290,6 +320,7 @@ sub list_update {
         }
       }
     }
+    delete $self->{hash}{primary_key} if($delete_hash_primary_key);
   }
 }
 
@@ -310,8 +341,7 @@ sub _list_update_helper {
 
 sub update_item {
   my $self = shift;
-  if( (defined $self->{update}{item}) && length $self->{update}{item}) {
-    isun "trying to SET_ITEM (update) $self->{item} to $self->{update}{item} in $self->{hash}{package} $self->{hash}{content}";
+  if(exists $self->{update}{item}) {
     $self->morph($self->{hash}{package});
     $self->SET_ITEM;
   }
@@ -320,7 +350,6 @@ sub update_item {
 sub update_group {
   my $self = shift;
   if( (defined $self->{update}{item}) && length $self->{update}{item}) {
-    isun "trying to SET_GROUP (update) $self->{item} to $self->{update}{item} in $self->{hash}{package} $self->{hash}{content}";
     $self->morph($self->{hash}{package});
     $self->SET_GROUP;
   }
@@ -420,9 +449,9 @@ sub check_cache {
     } else {
       $ref = $self->{cache}{$package}{$cache_level}{$self->{list_name}};
     }
-    if(defined $ref->{$key}) {
+    if(defined $ref->{$type}{$key}) {
       $found_in_cache = 1;
-      $content = $ref->{$key};
+      $content = $ref->{$type}{$key};
       $self->{from_cache} = "cache - $type";
       $self->{from_cache} .= " ttl ($self->{hash}{cache_hash}{int_time})" if($self->cache_hashed);
       last;
@@ -459,6 +488,13 @@ sub cache_hashed {
   my $self = shift;
   return $self->{hash}{cache_hash} && $self->{hash}{cache_hash}{ttl};
 }
+
+sub get_cache_key {
+  my $self = shift;
+  my $key = shift;
+  return $self->{hash}{$key} || $self->{$key} || '';
+}
+
 
 =head1 NAME
 

@@ -6,7 +6,7 @@
 # change 'tests => 1' to 'tests => last_test_to_print';
 
 use Test;
-BEGIN { plan tests => 6 };
+BEGIN { plan tests => 7 };
 use Data::Fallback;
 ok(1); # If we made it this far, we're ok.
 
@@ -86,5 +86,10 @@ my $back4 = $self->get('key1');
 print "\$back4 = '$back4'\n";
 print Dumper $self->{history};
 ok($back4 eq 'default1');
+
+my $back5 = $self->get('key2');
+print "\$back5 = '$back1'\n";
+print Dumper $self->{history};
+ok($back5 eq 'over2');
 
 ok(unlink $over_file, $default_file);

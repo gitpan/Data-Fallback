@@ -9,10 +9,6 @@ use vars qw(@ISA);
 @ISA = qw(Data::Fallback);
 use Carp qw(confess);
 
-sub isun {
-  return;
-}
-
 sub GET {
   my $self = shift;
   my $hash = shift;
@@ -24,7 +20,6 @@ sub GET {
           $return = 1;
     }
   } elsif(-e $hash->{group}) {
-    isun "had to Include $hash->{group}";
     my $text = Include($hash->{group});
     $self->{info}{WholeFile}{data}{$hash->{group}} = $text;
     $hash->{item} = $text;

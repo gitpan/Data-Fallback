@@ -14,11 +14,16 @@ use Data::Fallback;
 use vars qw(@ISA);
 @ISA = qw(Data::Fallback);
 
+sub get_memory_cache_key {
+  my $self = shift;
+  return $self->get_cache_key('primary_key') . "-" . $self->{item};
+}
+
 sub _GET {
   my $self = shift;
   my $return = 0;
   my ($found_in_cache, $content) = 
-    $self->check_cache('Memory', 'item', $self->{item});
+    $self->check_cache('Memory', 'item', $self->get_memory_cache_key);
 
   if($found_in_cache) {
     # already set in $content, so we're done
@@ -30,7 +35,7 @@ sub _GET {
 
 sub SET_ITEM {
   my $self = shift;
-  my ($key, $value) = ($self->{item}, $self->{update}{item});
+  my ($key, $value) = ($self->get_memory_cache_key, $self->{update}{item});
   die "need a \$self->{list_name}" unless( (defined $self->{list_name}) && length $self->{list_name});
   die "need a \$key" unless( (defined $key) && length $key);
   die "need a \$value" unless( (defined $value) && length $value);
